@@ -1,0 +1,35 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      name: Check out source code
+      
+    - name: Set up environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+
+    - name: Build project
+      run: make
+
+    - name: Run tests
+      run: make test
+
+    - name: Check shared library
+      run: |
+        if [ -f "rijndael.so" ]; then
+          echo "Shared library rijndael.so exists."
+        else
+          echo "Shared library rijndael.so does not exist." >&2
+          exit 1
+        fi
