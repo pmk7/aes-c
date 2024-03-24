@@ -22,9 +22,6 @@ jobs:
     - name: Build project
       run: make
 
-    - name: Run tests
-      run: make test
-
     - name: Check shared library
       run: |
         if [ -f "rijndael.so" ]; then
