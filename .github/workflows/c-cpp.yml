@@ -28,7 +28,7 @@ jobs:
       run: make
 
     - name: Run tests
-      run: python3 tests.py
+      run: python3 aes-python/tests.py
 
     - name: Check shared library
       run: |
