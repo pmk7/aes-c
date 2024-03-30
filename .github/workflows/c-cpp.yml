@@ -19,8 +19,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential
 
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
     - name: Build project
       run: make
+
+    - name: Run tests
+      run: python3 tests.py
 
     - name: Check shared library
       run: |
