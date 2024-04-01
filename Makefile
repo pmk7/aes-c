@@ -14,6 +14,7 @@ rijndael.so: rijndael.o
 
 test:
 	echo "Running make from: `pwd`"
+	python3 aes-python/tests.py
 
 clean:
 	rm -f *.o *.so
