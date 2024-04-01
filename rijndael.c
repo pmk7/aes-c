@@ -10,7 +10,6 @@
 #include "rijndael.h"
 
 // Implementation: S-Box
-
 unsigned char s_box[256] = {
     // 0     1    2      3     4    5     6     7      8    9     A      B    C     D     E     F
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,  // 0
@@ -41,69 +40,150 @@ void rotate(unsigned char *word);
 
 // Implementation: Rcon
 unsigned char r_con[255] = {
-    0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8,
-    0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3,
-    0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f,
-    0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d,
-    0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab,
-    0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d,
-    0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25,
-    0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d, 0x01,
-    0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d,
-    0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa,
-    0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25, 0x4a,
-    0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d, 0x01, 0x02,
-    0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a,
-    0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef,
-    0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94,
-    0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d, 0x01, 0x02, 0x04,
-    0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a, 0x2f,
-    0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5,
-    0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd, 0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33,
-    0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb};
+    0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40,
+    0x80, 0x1B, 0x36, 0x6C, 0xD8, 0xAB, 0x4D, 0x9A,
+    0x2F, 0x5E, 0xBC, 0x63, 0xC6, 0x97, 0x35, 0x6A,
+    0xD4, 0xB3, 0x7D, 0xFA, 0xEF, 0xC5, 0x91, 0x39,
+};
 
 unsigned char get_rcon_value(unsigned char num);
 
 // Implementation: Key Schedule Core
 void core(unsigned char *word, int iteration);
 
+// Helper functions
+unsigned char mul_by_02(unsigned char num) {
+    if (num < 0x80) 
+        return (num << 1);
+    else
+        return (num << 1) ^ 0x1b;
+}
+
+unsigned char mul_by_03(unsigned char num) {
+    return mul_by_02(num) ^ num;
+}
+
+unsigned char mul_by_0e(unsigned char num) {
+    return (unsigned char)((num << 1) ^ (num << 2) ^ (num << 3) ^ ((num & 0x80 ? 0x1B : 0) << 1));
+}
+
+unsigned char mul_by_0b(unsigned char num) {
+    return (unsigned char)(num ^ (num << 1) ^ (num << 3) ^ ((num & 0x80 ? 0x1B : 0) << 1));
+}
+
+unsigned char mul_by_0d(unsigned char num) {
+    return (unsigned char)(num ^ (num << 2) ^ (num << 3) ^ ((num & 0x80 ? 0x1B : 0) << 1));
+}
+
+unsigned char mul_by_09(unsigned char num) {
+    return (unsigned char)(num ^ (num << 3) ^ ((num & 0x80 ? 0x1B : 0) << 1));
+}
+
+
 /*
  * Operations used when encrypting a block
  */
 void sub_bytes(unsigned char *block) {
+    int i;
     for (int i = 0; i < BLOCK_SIZE; i++) {
         block[i] = s_box[block[i]];
     }
 }
 
 void shift_rows(unsigned char *block) {
-  // TODO: Implement me!
+    unsigned char temp;
+
+    // Shift the second row by 1
+    temp = block[1];
+    block[1] = block[5];
+    block[5] = block[9];
+    block[9] = block[13];
+    block[13] = temp;
+
+    // Shift the third row by 2
+    temp = block[2];
+    block[2] = block[10];
+    block[10] = block[6];
+    block[6] = block[14];
+    block[14] = temp;
+
+    // Shift the fourth row by 3
+    temp = block[3];
+    block[3] = block[15];
+    block[15] = block[11];
+    block[11] = block[7];
+    block[7] = temp;
 }
 
 void mix_columns(unsigned char *block) {
-  // TODO: Implement me!
+    unsigned char temp[4];
+    for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+            temp[j] = block[i*4 + j];
+        }
+        block[i*4 + 0] = (unsigned char)(mul_by_02(temp[0]) ^ mul_by_03(temp[1]) ^ temp[2] ^ temp[3]);
+        block[i*4 + 1] = (unsigned char)(temp[0] ^ mul_by_02(temp[1]) ^ mul_by_03(temp[2]) ^ temp[3]);
+        block[i*4 + 2] = (unsigned char)(temp[0] ^ temp[1] ^ mul_by_02(temp[2]) ^ mul_by_03(temp[3]));
+        block[i*4 + 3] = (unsigned char)(mul_by_03(temp[0]) ^ temp[1] ^ temp[2] ^ mul_by_02(temp[3]));
+    }
 }
 
 /*
  * Operations used when decrypting a block
  */
 void invert_sub_bytes(unsigned char *block) {
-  // TODO: Implement me!
+    int i;
+    for (i = 0; i < BLOCK_SIZE; i++) {
+        block[i] = rs_box[block[i]];
+    }
 }
 
 void invert_shift_rows(unsigned char *block) {
-  // TODO: Implement me!
+    unsigned char temp;
+
+    // Shift the second row to the right by 1
+    temp = block[13];
+    block[13] = block[9];
+    block[9] = block[5];
+    block[5] = block[1];
+    block[1] = temp;
+
+    // Shift the third row to the right by 2
+    temp = block[2];
+    block[2] = block[10];
+    block[10] = temp;
+    temp = block[6];
+    block[6] = block[14];
+    block[14] = temp;
+
+    // Shift the fourth row to the right by 3
+    temp = block[3];
+    block[3] = block[7];
+    block[7] = block[11];
+    block[11] = block[15];
+    block[15] = temp;
 }
 
 void invert_mix_columns(unsigned char *block) {
-  // TODO: Implement me!
+    unsigned char temp[4];
+    for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+            temp[j] = block[i*4 + j];
+        }
+        block[i*4 + 0] = (unsigned char)(mul_by_0e(temp[0]) ^ mul_by_0b(temp[1]) ^ mul_by_0d(temp[2]) ^ mul_by_09(temp[3]));
+        block[i*4 + 1] = (unsigned char)(mul_by_09(temp[0]) ^ mul_by_0e(temp[1]) ^ mul_by_0b(temp[2]) ^ mul_by_0d(temp[3]));
+        block[i*4 + 2] = (unsigned char)(mul_by_0d(temp[0]) ^ mul_by_09(temp[1]) ^ mul_by_0e(temp[2]) ^ mul_by_0b(temp[3]));
+        block[i*4 + 3] = (unsigned char)(mul_by_0b(temp[0]) ^ mul_by_0d(temp[1]) ^ mul_by_09(temp[2]) ^ mul_by_0e(temp[3]));
+    }
 }
 
 /*
  * This operation is shared between encryption and decryption
  */
 void add_round_key(unsigned char *block, unsigned char *round_key) {
-  // TODO: Implement me!
+    for (int i = 0; i < 16; i++) {
+        block[i] ^= round_key[i];
+    }
 }
 
 /*
