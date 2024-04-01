@@ -24,9 +24,6 @@ jobs:
       with:
          python-version: '3.10.12'
     
-    - name: List aes-python directory contents
-      run: ls -lah aes-python/     
-
     - name: Build project
       run: make
 

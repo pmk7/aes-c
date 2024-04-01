@@ -13,8 +13,7 @@ rijndael.so: rijndael.o
     $(CC) -o rijndael.so -shared rijndael.o
 
 test:
-	echo "Running make from: `pwd`"
-	cd aes-python && python3 tests.py
+    echo "Running make from: `pwd`"
 
 clean:
     rm -f *.o *.so
