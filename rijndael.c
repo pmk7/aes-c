@@ -1,6 +1,5 @@
 /*
- * TODO: Add your name and student number here, along with
- *       a brief description of this code.
+ * Philip Keogh
  * 
  * This code implements the Rijndael cipher.
  * It includes functions for key expansion, and the four main operations of the AES algorithm: sub_bytes, shift_rows, mix_columns, and add_round_key. 
@@ -131,32 +130,42 @@ unsigned char mul_by_09(unsigned char num) {
 /*
  * Operations used when encrypting a block
  */
+
+
+// This step is a non-linear byte substitution for each byte in the input block.
 void sub_bytes(unsigned char *block) {
-    int i;
+    // Iterate through each byte in the 16-byte block.
     for (int i = 0; i < BLOCK_SIZE; i++) {
+        // Substitute each byte using the S-box.
+        // The S_BOX array acts as a lookup table to perform the substitution.
         block[i] = S_BOX[block[i]];
     }
 }
 
+// Performs the ShiftRows step in the AES encryption process.
+// Rows of the state are cyclically shifted by different offsets.
 void shift_rows(unsigned char *block) {
     unsigned char temp;
 
-    // Shift second row 1 byte to left  
+    // Shift the second row 1 byte to the left
+    // This uses a temporary variable to cyclically rotate the bytes
     temp = block[1];
     block[1] = block[5];
     block[5] = block[9];
     block[9] = block[13];
     block[13] = temp;
 
-    // Shift third row 2 bytes to left  
-    temp = block[2]; // Store original block[2]
+    // Shift the third row 2 bytes to the left
+    // It requires two steps, swapping two pairs of bytes
+    temp = block[2];  // Temporarily store the value at block[2]
     block[2] = block[10];
     block[10] = temp;
-    temp = block[6]; // Store original block[6]
+    temp = block[6];  // Temporarily store the next value to keep the shift
     block[6] = block[14];
     block[14] = temp;
 
-    // Shift fourth row 3 bytes to left (like a circular shift)
+    // Shift the fourth row 3 bytes to the left
+    // This is a circular shift done in the reverse direction of the second row
     temp = block[3];
     block[3] = block[15];
     block[15] = block[11];
@@ -164,78 +173,111 @@ void shift_rows(unsigned char *block) {
     block[7] = temp;
 }
 
-
+// This function mixes the columns of the state matrix.
 void mix_columns(unsigned char *block) {
     unsigned char temp[4];
 
+    // Iterate over each column of the state block
     for (int i = 0; i < 4; i++) {
+        // Copy the current column to a temporary array for manipulation
         for (int j = 0; j < 4; j++) {
-            temp[j] = block[i*4 + j];
+            temp[j] = block[i * 4 + j];
         }
-        block[i*4 + 0] = gmul(temp[0], 0x02) ^ gmul(temp[3], 0x01) ^ gmul(temp[2], 0x01) ^ gmul(temp[1], 0x03);
-        block[i*4 + 1] = gmul(temp[1], 0x02) ^ gmul(temp[0], 0x01) ^ gmul(temp[3], 0x01) ^ gmul(temp[2], 0x03);
-        block[i*4 + 2] = gmul(temp[2], 0x02) ^ gmul(temp[1], 0x01) ^ gmul(temp[0], 0x01) ^ gmul(temp[3], 0x03);
-        block[i*4 + 3] = gmul(temp[3], 0x02) ^ gmul(temp[2], 0x01) ^ gmul(temp[1], 0x01) ^ gmul(temp[0], 0x03);
+
+        // Perform the mix column operation on the temporary array and
+        // write the results back to the original block.
+        // Each byte in a column is replaced with a value dependent on the values of all bytes in that column.
+        block[i * 4 + 0] = gmul(temp[0], 0x02) ^ gmul(temp[3], 0x01) ^ gmul(temp[2], 0x01) ^ gmul(temp[1], 0x03);
+        block[i * 4 + 1] = gmul(temp[1], 0x02) ^ gmul(temp[0], 0x01) ^ gmul(temp[3], 0x01) ^ gmul(temp[2], 0x03);
+        block[i * 4 + 2] = gmul(temp[2], 0x02) ^ gmul(temp[1], 0x01) ^ gmul(temp[0], 0x01) ^ gmul(temp[3], 0x03);
+        block[i * 4 + 3] = gmul(temp[3], 0x02) ^ gmul(temp[2], 0x01) ^ gmul(temp[1], 0x01) ^ gmul(temp[0], 0x03);
     }
 }
+
 
 /*
  * Operations used when decrypting a block
  */
+
+
+
+// This function applies the inverse S-Box to each byte of the state block,
+// effectively reversing the sub_bytes step of the encryption process.
 void invert_sub_bytes(unsigned char *block) {
-    int i;
-    for (i = 0; i < BLOCK_SIZE; i++) {
+    // Iterate over each byte in the 16-byte block
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        // Replace each byte with its corresponding value from the inverse S-Box (RS_BOX)
         block[i] = RS_BOX[block[i]];
     }
 }
 
-void invert_shift_rows(unsigned char *block) {
-    unsigned char temp;
 
-    // Shift the second row to the right by 1
-    temp = block[13];
+
+// This function reverses the row shifting done during the encryption's shift_rows step,
+// effectively aligning the block back to its original row order before encryption.
+void invert_shift_rows(unsigned char *block) {
+    unsigned char temp; // Temporary storage for byte swapping
+
+    // Shift the second row to the right by 1 position
+    temp = block[13]; // Temporarily store the last byte of the row
     block[13] = block[9];
     block[9] = block[5];
     block[5] = block[1];
-    block[1] = temp;
+    block[1] = temp; // Move the temporary stored byte to the start of the row
 
-    // Shift the third row to the right by 2
-    temp = block[2];
+    // Shift the third row to the right by 2 positions
+    // Perform the shift in two steps for each byte to complete the two-position shift
+    temp = block[2]; // Temporarily store the second byte of the row
     block[2] = block[10];
-    block[10] = temp;
-    temp = block[6];
+    block[10] = temp; // Complete the first half of the shifting
+    temp = block[6]; // Repeat for the second half
     block[6] = block[14];
     block[14] = temp;
 
-    // Shift the fourth row to the right by 3
-    temp = block[3];
-    block[3] = block[7];
-    block[7] = block[11];
-    block[11] = block[15];
-    block[15] = temp;
+    // Shift the fourth row to the right by 3 positions, completing a circular shift
+    temp = block[3]; // Temporarily store the first byte of the row
+    block[3] = block[15]; // Shift each byte to the right by 3 positions
+    block[15] = block[11];
+    block[11] = block[7];
+    block[7] = temp; // Place the temporarily stored byte at the last position
 }
 
+
+
+// This function reverses the column mixing done during the encryption's mix_columns step,
+// effectively realigning the block columns to their original state before encryption.
 void invert_mix_columns(unsigned char *block) {
-    unsigned char temp[4];
-    for(int i = 0; i < 4; i++) {
-        for(int j = 0; j < 4; j++) {
-            temp[j] = block[i*4 + j];
+    unsigned char temp[4]; // Temporary storage for a column
+
+    // Iterate over each of the 4 columns
+    for(int col = 0; col < 4; col++) {
+        // Copy the current column into temp
+        for(int row = 0; row < 4; row++) {
+            temp[row] = block[col * 4 + row];
         }
-        block[i*4 + 0] = (unsigned char)(mul_by_0e(temp[0]) ^ mul_by_0b(temp[1]) ^ mul_by_0d(temp[2]) ^ mul_by_09(temp[3]));
-        block[i*4 + 1] = (unsigned char)(mul_by_09(temp[0]) ^ mul_by_0e(temp[1]) ^ mul_by_0b(temp[2]) ^ mul_by_0d(temp[3]));
-        block[i*4 + 2] = (unsigned char)(mul_by_0d(temp[0]) ^ mul_by_09(temp[1]) ^ mul_by_0e(temp[2]) ^ mul_by_0b(temp[3]));
-        block[i*4 + 3] = (unsigned char)(mul_by_0b(temp[0]) ^ mul_by_0d(temp[1]) ^ mul_by_09(temp[2]) ^ mul_by_0e(temp[3]));
+
+        // Apply the Inverse MixColumns transformation using pre-defined multiplication functions
+        block[col * 4 + 0] = (unsigned char)(mul_by_0e(temp[0]) ^ mul_by_0b(temp[1]) ^ mul_by_0d(temp[2]) ^ mul_by_09(temp[3]));
+        block[col * 4 + 1] = (unsigned char)(mul_by_09(temp[0]) ^ mul_by_0e(temp[1]) ^ mul_by_0b(temp[2]) ^ mul_by_0d(temp[3]));
+        block[col * 4 + 2] = (unsigned char)(mul_by_0d(temp[0]) ^ mul_by_09(temp[1]) ^ mul_by_0e(temp[2]) ^ mul_by_0b(temp[3]));
+        block[col * 4 + 3] = (unsigned char)(mul_by_0b(temp[0]) ^ mul_by_0d(temp[1]) ^ mul_by_09(temp[2]) ^ mul_by_0e(temp[3]));
     }
 }
 
 /*
  * This operation is shared between encryption and decryption
  */
+
+// This step combines the block of data with a key using bitwise XOR.
+// It is used both in encryption and decryption processes.
 void add_round_key(unsigned char *block, unsigned char *round_key) {
-    for (int i = 0; i < 16; i++) {
-        block[i] ^= round_key[i];
+    // Iterate through each byte of the block
+    for (int index = 0; index < BLOCK_SIZE; index++) {
+        // Perform bitwise XOR between each byte of the block and the round key
+        block[index] ^= round_key[index];
     }
 }
+
 
 /*
  * This function should expand the round key. Given an input,
@@ -287,10 +329,10 @@ unsigned char *aes_encrypt_block(unsigned char *plaintext, unsigned char *key) {
         state[i] = plaintext[i];
     }
 
-    // initial AddRoundKey
+    // initial add_round_key
     add_round_key(state, expanded_key);
 
-    // 9 rounds of SubBytes, ShiftRows, MixColumns, AddRoundKey
+    // 9 rounds of sub_bytes, shift_rows, mix_columns, add_round_key
     for (int round = 1; round < 10; round++) {
         sub_bytes(state);
         shift_rows(state);
